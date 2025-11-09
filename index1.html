@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Coupon Shop</title>
+  <style>
+    :root {
+      --bg: #0f172a;        /* slate-900 */
+      --panel: #111827;     /* gray-900 */
+      --muted: #94a3b8;     /* slate-400 */
+      --text: #e5e7eb;      /* gray-200 */
+      --brand: #22c55e;     /* green-500 */
+      --accent: #38bdf8;    /* sky-400 */
+      --danger: #ef4444;    /* red-500 */
+      --card: #0b1220;      /* deep */
+      --stroke: #1f2937;    /* gray-800 */
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+      background: radial-gradient(1000px 600px at 80% -10%, rgba(56,189,248,.15), transparent),
+                  radial-gradient(800px 500px at -10% 10%, rgba(34,197,94,.12), transparent),
+                  var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    .container { max-width: 980px; margin: 0 auto; padding: 24px; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo {
+      width: 40px; height: 40px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--brand));
+      box-shadow: 0 10px 24px rgba(56,189,248,.25), inset 0 0 30px rgba(255,255,255,.15);
+    }
+    .title { font-size: 22px; font-weight: 700; letter-spacing: .2px; }
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      border: 1px solid var(--stroke);
+      border-radius: 16px; padding: 18px; backdrop-filter: blur(6px);
+      box-shadow: 0 10px 25px rgba(0,0,0,.25);
+    }
+    .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media (min-width: 900px){ .grid { grid-template-columns: 1.4fr .9fr; } }
+
+    .section-title { font-size: 18px; font-weight: 700; margin: 6px 0 10px; }
+    .muted { color: var(--muted); font-size: 14px; }
+    .list { display: grid; gap: 12px; }
+    .coupon { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 12px; border: 1px dashed var(--stroke); border-radius: 12px; background: #0b1220c2; }
+    .qty { display: inline-flex; align-items: center; gap: 8px; }
+    .qty button { width: 28px; height: 28px; border-radius: 10px; border: 1px solid var(--stroke); background: #0b1220; color: var(--text); cursor: pointer; }
+    .price { font-weight: 700; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row-1 { display: grid; grid-template-columns: 1fr; gap: 12px; }
+
+    label { font-size: 13px; color: var(--muted); }
+    input, select, textarea {
+      width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--stroke); background: #0b1220; color: var(--text);
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 12px 14px; border-radius: 12px; border: 1px solid var(--stroke);
+      cursor: pointer; font-weight: 700; letter-spacing: .3px;
+      transition: transform .05s ease, box-shadow .15s ease;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { background: linear-gradient(135deg, var(--brand), #16a34a); color: #041007; }
+    .btn-outline { background: #0b1220; color: var(--text); }
+    .btn-danger { background: linear-gradient(135deg, var(--danger), #b91c1c); color: #fff; }
+
+    .qr-wrap { display: grid; grid-template-columns: 140px 1fr; gap: 14px; align-items: center; }
+    .qr { width: 140px; height: 140px; border-radius: 12px; background: #fff; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--stroke); }
+    .qr img { width: 100%; height: 100%; object-fit: cover; }
+    .badge { display: inline-block; padding: 6px 10px; border-radius: 999px; font-size: 12px; background: rgba(56,189,248,.15); color: #7dd3fc; border: 1px solid rgba(56,189,248,.3); }
+
+    .summary { display: grid; gap: 8px; border-top: 1px dashed var(--stroke); padding-top: 10px; }
+    .sum-row { display: flex; justify-content: space-between; font-size: 14px; }
+    .sum-row.total { font-weight: 800; font-size: 16px; }
+
+    .divider { height: 1px; background: var(--stroke); margin: 10px 0; opacity: .6; }
+
+    footer { margin-top: 22px; font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+    .qty input { width: 80px; height: 36px; border-radius: 10px; border: 1px solid var(--stroke); background: #0b1220; color: var(--text); padding: 6px 10px; text-align: center; } 
+
+    /* Downloadable receipt styling */
+    #receipt { background: #0b1220; border: 1px solid var(--stroke); border-radius: 14px; padding: 14px; }
+    #receipt h3 { margin: 0 0 8px; }
+
+    .notice { font-size: 12px; color: var(--muted); }
+  </style>
+  <!-- html2canvas for screenshot (client-side). Leave this tag as-is. -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <div class="title">Coupon Shop</div>
+          <div class="muted">Buy discount coupons. Pay via UPI QR.</div>
+        </div>
+      </div>
+      <span class="badge">Beginner Friendly</span>
+    </header>
+
+    <div class="grid" id="app">
+      <!-- Left: Products + Buyer details -->
+      <section class="card">
+        <div class="section-title">Flipkart coupons</div>
+        <div class="list" id="couponList"></div>
+
+        <div class="divider"></div>
+
+        <div class="section-title">Your details (optional)</div>
+
+        <div class="row">
+          <div>
+            <label for="buyerName">Name</label>
+            <input id="buyerName" placeholder="e.g., Rohan Kumar" />
+          </div>
+          <div>
+            <label for="buyerPhone">Phone</label>
+            <input id="buyerPhone" placeholder="10-digit number" />
+          </div>
+        </div>
+        <div style="margin-top: 10px;">
+          <label for="buyerNote">Note (optional)</label>
+          <textarea id="buyerNote" rows="2" placeholder="Any special request..."></textarea>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="summary" id="priceSummary">
+          <div class="sum-row"><span>Subtotal</span><strong id="subtotal">₹0</strong></div>
+          <div class="sum-row"><span>Platform fee</span><span id="fee">₹0</span></div>
+          <div class="sum-row total"><span>Total to pay</span><span id="total">₹0</span></div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:12px; flex-wrap: wrap;">
+          <button class="btn btn-primary" id="makeOrder">Generate order</button>
+          <button class="btn btn-outline" id="clearAll">Reset</button>
+        </div>
+        <p class="notice" style="margin-top: 8px;">Tip: After payment, come back here, fill details, generate order, then use the buttons at the bottom to save a screenshot or share on WhatsApp.</p>
+      </section>
+
+      <!-- Right: Pay by QR + Receipt preview -->
+      <section class="card">
+        <div class="section-title">Pay by UPI QR</div>
+        <div class="qr-wrap">
+          <div class="qr">
+            <!-- Replace src with your own QR image file name -->
+            <img id="qrImage" src="qr.png" alt="Your UPI QR" />
+          </div>
+          <div>
+            <div style="font-weight:700;">Scan & Pay</div>
+            <div class="muted">UPI ID: <span id="upiId">paytmqr5i37ho@ptys</span></div>
+            <div class="divider"></div>
+            <div class="notice">Manual verification: Payments are checked by you. This page does not auto-confirm UPI.</div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div id="receipt">
+          <h3 style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            <span>Order Summary</span>
+            <span class="badge" id="orderStatus">Draft</span>
+          </h3>
+          <div id="receiptBody" class="muted">No items yet. Choose coupons and click “Generate order”.</div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:12px; flex-wrap: wrap;">
+          <button class="btn btn-outline" id="downloadImg">Save screenshot</button>
+          <a class="btn btn-outline" id="shareWA" href="#" target="_blank" rel="noopener">Share on WhatsApp</a>
+          <button class="btn btn-danger" id="printPdf">Print / Save as PDF</button>
+        </div>
+      </section>
+    </div>
+
+    <footer>
+      <div>© <span id="year"></span> Coupon Shop</div>
+      <div class="notice">Built for beginners. Single HTML file. No database. Use WhatsApp to receive orders.</div>
+    </footer>
+  </div>
+
+  <script>
+    // ====== 1) BASIC CATALOG (edit prices or titles here) ======
+    const CATALOG = [
+  { id: 'F20', title: 'Flipkart 20-digit coupon', price: 6, length: 20, stock: 1000 },
+  { id: 'F19', title: 'Flipkart 19-digit coupon', price: 6, length: 19, stock: 0 },
+  { id: 'F17', title: 'Flipkart 17-digit coupon', price: 6, length: 17, stock: 0 },
+];
+
+
+    // Platform fee (flat) – set to 0 if you don't want any extra
+    const PLATFORM_FEE = 0;
+const couponListEl = document.getElementById('couponList');
+const state = { items: {}, total: 0 };
+
+    // ====== 2) RENDER COUPON LIST ======
+    function renderCoupons(){
+  couponListEl.innerHTML = '';
+  CATALOG.forEach(item => {
+    const wrap = document.createElement('div');
+    wrap.className = 'coupon' + (item.stock === 0 ? ' oos' : '');
+
+    const stockText = item.stock === 0 ? 'Out of stock' : item.stock;
+
+    const title = document.createElement('div');
+    title.innerHTML = `
+      <strong>${item.title}</strong>
+      <div class="muted">ID: ${item.id} • Length: ${item.length} digits • Stock: ${stockText}</div>
+    `;
+
+    const price = document.createElement('div');
+    price.className = 'price';
+    price.textContent = `₹${item.price} / coupon`;
+
+    const qty = document.createElement('div');
+    qty.className = 'qty';
+    const disabled = item.stock === 0 ? 'disabled' : '';
+    const current = state.items[item.id] || 0;
+    qty.innerHTML = `
+      <input ${disabled} type="number" min="0" max="${item.stock}" step="1"
+             id="qty-${item.id}" value="${current}">
+    `;
+
+    const inputEl = qty.querySelector('input');
+    if (inputEl) {
+      inputEl.addEventListener('input', () => {
+        let val = parseInt(inputEl.value || '0', 10);
+        if (isNaN(val) || val < 0) val = 0;
+        if (val > item.stock) val = item.stock;
+        state.items[item.id] = val;
+        inputEl.value = val;
+        recalc();
+      });
+    }
+
+    wrap.appendChild(title);
+    wrap.appendChild(price);
+    wrap.appendChild(qty);
+    couponListEl.appendChild(wrap);
+  });
+}
+// ====== 3) PRICE SUMMARY ======
+function recalc(){
+  const subtotal = Object.entries(state.items).reduce((acc, [id, q]) => {
+    const item = CATALOG.find(i => i.id === id);
+    const qty = Number(q) || 0;
+    return acc + (item ? item.price * qty : 0);
+  }, 0);
+
+  const fee = subtotal > 0 ? PLATFORM_FEE : 0;
+  const total = subtotal + fee;
+
+  document.getElementById('subtotal').textContent = `₹${subtotal}`;
+  document.getElementById('fee').textContent = `₹${fee}`;
+  document.getElementById('total').textContent = `₹${total}`;
+
+  state.total = total;
+}
+ 
+// ====== 4) ORDER GENERATION ======
+function generateOrder(){
+  const name = document.getElementById('buyerName').value.trim();
+  const phone = document.getElementById('buyerPhone').value.trim();
+  const note = document.getElementById('buyerNote').value.trim();
+
+  if (state.total <= 0) { alert('Please add at least one coupon.'); return; }
+
+  // Phone is optional, but if filled it must be 10 digits
+  if (phone && !/^\d{10}$/.test(phone)) {
+    alert('Enter a valid 10-digit phone number, or leave it empty.');
+    return;
+  }
+
+  // Build line items
+  const lines = Object.entries(state.items)
+    .filter(([_, q]) => q > 0)
+    .map(([id, q]) => {
+      const item = CATALOG.find(i => i.id === id);
+      return `<tr><td>${item.title}</td><td style="text-align:center;">${q}</td><td style="text-align:right;">₹${item.price * q}</td></tr>`;
+    }).join('');
+
+  const now = new Date();
+  const orderId = 'ORD' + now.getFullYear().toString().slice(-2)
+                + (now.getMonth()+1).toString().padStart(2,'0')
+                + now.getDate().toString().padStart(2,'0')
+                + '-' + Math.random().toString(36).slice(2,6).toUpperCase();
+
+  document.getElementById('orderStatus').textContent = 'Pending Payment';
+
+  // Only show name/phone if provided
+  const nameRow  = name  ? `<div><strong>Name:</strong> ${escapeHtml(name)}</div>` : '';
+  const phoneRow = phone ? `<div class="muted">Phone: ${phone}</div>` : '';
+
+  document.getElementById('receiptBody').innerHTML = `
+    <div style="display:flex; justify-content:space-between; gap:6px;">
+      <div>
+        <div><strong>Order ID:</strong> ${orderId}</div>
+        <div class="muted">Date: ${now.toLocaleString()}</div>
+      </div>
+      <div style="text-align:right;">
+        ${nameRow}
+        ${phoneRow}
+      </div>
+    </div>
+    <div class="divider"></div>
+    <table style="width:100%; border-collapse: collapse; font-size:14px;">
+      <thead>
+        <tr style="text-align:left; color: var(--muted);">
+          <th>Item</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>${lines}</tbody>
+      <tfoot>
+        <tr><td></td><td style="text-align:right; color: var(--muted);">Fee</td><td style="text-align:right;">₹${state.total > 0 ? PLATFORM_FEE : 0}</td></tr>
+        <tr><td></td><td style="text-align:right; font-weight:800;">Total</td><td style="text-align:right; font-weight:800;">₹${state.total}</td></tr>
+      </tfoot>
+    </table>
+    ${note ? `<div class="divider"></div><div class="muted"><strong>Note:</strong> ${escapeHtml(note)}</div>` : ''}
+    <div class="divider"></div>
+    <div class="notice">Paid via UPI QR to <strong>${document.getElementById('merchantName')?.textContent || 'Merchant'}</strong> (UPI: ${document.getElementById('upiId')?.textContent || ''}). Attach payment screenshot when you share.</div>
+  `;
+
+  // Build WhatsApp message (include details only if present)
+  let msg = `*Coupon Order*%0AOrder ID: ${orderId}%0ATotal: ₹${state.total}%0AItems:%0A` +
+    Object.entries(state.items)
+      .filter(([_,q])=>q>0)
+      .map(([id,q])=>{ const item = CATALOG.find(i=>i.id===id); return `- ${item.title} x ${q}`; })
+      .join('%0A');
+
+  if (name)  msg = `*Coupon Order*%0AOrder ID: ${orderId}%0AName: ${encodeURIComponent(name)}%0A` + msg.slice('*Coupon Order*%0A'.length);
+  if (phone) msg += `%0APhone: ${phone}`;
+  if (note)  msg += `%0ANote: ${encodeURIComponent(note)}`;
+
+  document.getElementById('shareWA').href = `https://wa.me/?text=${msg}`;
+}
+
+      // Update WhatsApp share link
+      const msg = `*Coupon Order*%0AOrder ID: ${orderId}%0AName: ${encodeURIComponent(name)}%0APhone: ${phone}%0ATotal: ₹${state.total}%0AItems:%0A` +
+        Object.entries(state.items).filter(([_,q])=>q>0).map(([id,q])=>{
+          const item = CATALOG.find(i=>i.id===id); return `- ${item.title} x ${q}`; }).join('%0A');
+      document.getElementById('shareWA').href = `https://wa.me/?text=${msg}`;
+      
+
+    function escapeHtml(s){
+      return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+    }
+
+    // ====== 5) SCREENSHOT / PDF ======
+    async function downloadReceiptImage(){
+      const target = document.getElementById('receipt');
+      try {
+        const canvas = await html2canvas(target, { scale: 2, backgroundColor: null });
+        const link = document.createElement('a');
+        link.download = `coupon-order-${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } catch (e){ alert('Could not create screenshot. Make sure you are online (for html2canvas).'); }
+    }
+
+    function printAsPdf(){
+      window.print(); // Use browser print dialog to save as PDF
+    }
+
+    function clearAll(){
+      state.items = {}; state.total = 0; renderCoupons(); recalc();
+      document.getElementById('buyerName').value = '';
+      document.getElementById('buyerPhone').value = '';
+      document.getElementById('buyerNote').value = '';
+      document.getElementById('receiptBody').innerHTML = 'No items yet. Choose coupons and click “Generate order”.';
+      document.getElementById('orderStatus').textContent = 'Draft';
+      document.getElementById('shareWA').href = '#';
+    }
+
+    // ====== 6) INIT ======
+    renderCoupons();
+    recalc();
+    document.getElementById('makeOrder').addEventListener('click', generateOrder);
+    document.getElementById('downloadImg').addEventListener('click', downloadReceiptImage);
+    document.getElementById('printPdf').addEventListener('click', printAsPdf);
+    document.getElementById('clearAll').addEventListener('click', clearAll);
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
