@@ -25,6 +25,24 @@ const PLATFORM_FEE = 0;
 // State + elements
 const couponListEl = document.getElementById('couponList');
 const state = { items: {}, total: 0 };
+// 10% offer config
+const OFFER_MIN_QTY = 100;
+const OFFER_RATE = 0.10;
+
+// track offer state
+state.offerApplied = false;
+
+// offer UI refs
+const applyOfferEl   = document.getElementById('applyOffer');
+const offerStatusEl  = document.getElementById('offerStatus');
+const discountRowEl  = document.getElementById('discountRow');
+const discountEl     = document.getElementById('discount');
+
+// toggle by user
+applyOfferEl?.addEventListener('change', () => {
+  state.offerApplied = applyOfferEl.checked;
+  recalc();
+});
 
 // ====== 2) RENDER LIST ======
 function renderCoupons(){
@@ -75,18 +93,49 @@ function renderCoupons(){
 
 // ====== 3) PRICE SUMMARY ======
 function recalc(){
+  // subtotal
   const subtotal = Object.entries(state.items).reduce((acc, [id, q]) => {
     const item = CATALOG.find(i => i.id === id);
     const qty = Number(q) || 0;
     return acc + (item ? item.price * qty : 0);
   }, 0);
 
-  const fee = subtotal > 0 ? PLATFORM_FEE : 0;
-  const total = subtotal + fee;
+  // total quantity across all items (mix allowed)
+  const totalQty = Object.values(state.items).reduce((a, n) => a + (Number(n) || 0), 0);
 
+  // eligibility
+  const eligible = totalQty >= OFFER_MIN_QTY;
+
+  // keep checkbox in sync
+  if (applyOfferEl) {
+    applyOfferEl.disabled = !eligible;
+    if (!eligible) {
+      state.offerApplied = false;
+      applyOfferEl.checked = false;
+    }
+  }
+  if (offerStatusEl) {
+    offerStatusEl.textContent = eligible
+      ? (state.offerApplied ? 'Applied' : 'Eligible')
+      : 'Not eligible';
+  }
+
+  // discount
+  const discount = state.offerApplied && eligible ? Math.round(subtotal * OFFER_RATE) : 0;
+
+  // fee and total
+  const fee = subtotal > 0 ? PLATFORM_FEE : 0;
+  const total = subtotal - discount + fee;
+
+  // UI
   document.getElementById('subtotal').textContent = `₹${subtotal}`;
-  document.getElementById('fee').textContent = `₹${fee}`;
-  document.getElementById('total').textContent = `₹${total}`;
+  document.getElementById('fee').textContent      = `₹${fee}`;
+  document.getElementById('total').textContent    = `₹${total}`;
+
+  if (discountRowEl && discountEl) {
+    discountRowEl.style.display = discount > 0 ? '' : 'none';
+    discountEl.textContent = `–₹${discount}`;
+  }
 
   state.total = total;
 }
@@ -117,50 +166,35 @@ async function generateOrder() {
   if (phone && !/^\d{10}$/.test(phone)) { alert('Enter a valid 10-digit phone number, or leave it empty.'); return; }
 
   // Build receipt (left panel)
-  const lines = Object.entries(state.items)
-    .filter(([_, q]) => q > 0)
-    .map(([id, q]) => {
-      const item = CATALOG.find(i => i.id === id);
-      return `<tr><td>${item.title}</td><td style="text-align:center;">${q}</td><td style="text-align:right;">₹${item.price * q}</td></tr>`;
-    }).join('');
+  // --- compute values again so the receipt matches checkout ---
+const subForReceipt = Object.entries(state.items).reduce((acc, [id, q]) => {
+  const item = CATALOG.find(i => i.id === id);
+  const qty = Number(q) || 0;
+  return acc + (item ? item.price * qty : 0);
+}, 0);
+const totalQtyForReceipt = Object.values(state.items).reduce((a, n) => a + (Number(n) || 0), 0);
+const eligibleOffer = totalQtyForReceipt >= OFFER_MIN_QTY;
+const discountForReceipt = (state.offerApplied && eligibleOffer) ? Math.round(subForReceipt * OFFER_RATE) : 0;
+const feeForReceipt = subForReceipt > 0 ? PLATFORM_FEE : 0;
+const grandTotal = subForReceipt - discountForReceipt + feeForReceipt;
 
-  const now = new Date();
-  const orderId = 'ORD' + now.getFullYear().toString().slice(-2)
-                + (now.getMonth()+1).toString().padStart(2,'0')
-                + now.getDate().toString().padStart(2,'0')
-                + '-' + Math.random().toString(36).slice(2,6).toUpperCase();
+  <tfoot>
+  <tr>
+    <td></td>
+    <td style="text-align:right; color: var(--muted);">Fee</td>
+    <td style="text-align:right;">₹${feeForReceipt}</td>
+  </tr>
+  ${discountForReceipt > 0
+    ? `<tr><td></td><td style="text-align:right; color: var(--muted);">Discount (10% off)</td><td style="text-align:right;">–₹${discountForReceipt}</td></tr>`
+    : ''
+  }
+  <tr>
+    <td></td>
+    <td style="text-align:right; font-weight:800;">Total</td>
+    <td style="text-align:right; font-weight:800;">₹${grandTotal}</td>
+  </tr>
+</tfoot>
 
-  const orderStatus = document.getElementById('orderStatus');
-  if (orderStatus) orderStatus.textContent = 'Pending Payment';
-
-  const nameRow  = name  ? `<div><strong>Name:</strong> ${escapeHtml(name)}</div>` : '';
-  const phoneRow = phone ? `<div class="muted">Phone: ${phone}</div>` : '';
-  const receiptBody = document.getElementById('receiptBody');
-
-  if (receiptBody) {
-    receiptBody.innerHTML = `
-      <div style="display:flex; justify-content:space-between; gap:6px;">
-        <div>
-          <div><strong>Order ID:</strong> ${orderId}</div>
-          <div class="muted">Date: ${now.toLocaleString()}</div>
-        </div>
-        <div style="text-align:right;">
-          ${nameRow}
-          ${phoneRow}
-        </div>
-      </div>
-      <div class="divider"></div>
-      <table style="width:100%; border-collapse: collapse; font-size:14px;">
-        <thead>
-          <tr style="text-align:left; color: var(--muted);">
-            <th>Item</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Amount</th>
-          </tr>
-        </thead>
-        <tbody>${lines}</tbody>
-        <tfoot>
-          <tr><td></td><td style="text-align:right; color: var(--muted);">Fee</td><td style="text-align:right;">₹${state.total > 0 ? PLATFORM_FEE : 0}</td></tr>
-          <tr><td></td><td style="text-align:right; font-weight:800;">Total</td><td style="text-align:right; font-weight:800;">₹${state.total}</td></tr>
-        </tfoot>
       </table>
       ${note ? `<div class="divider"></div><div class="muted"><strong>Note:</strong> ${escapeHtml(note)}</div>` : ''}
       <div class="divider"></div>
@@ -176,6 +210,9 @@ async function generateOrder() {
   if (name)  msg = `*Coupon Order*%0AOrder ID: ${orderId}%0AName: ${encodeURIComponent(name)}%0A` + msg.slice('*Coupon Order*%0A'.length);
   if (phone) msg += `%0APhone: ${phone}`;
   if (note)  msg += `%0ANote: ${encodeURIComponent(note)}`;
+  if (discountForReceipt > 0) {
+  msg += `%0ADiscount: ₹${discountForReceipt}`;
+}
 
   const shareBtn = document.getElementById('shareWA');
 if (shareBtn) shareBtn.href = `https://api.whatsapp.com/send?phone=918757275722&text=${msg}`;
@@ -307,5 +344,6 @@ on(shareBtn, 'click', async (e) => {
 // Footer year
 const yearEl = document.getElementById('year');
 if (yearEl) yearEl.textContent = new Date().getFullYear();
+
 
 
