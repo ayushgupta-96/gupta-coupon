@@ -303,7 +303,7 @@ async function generateOrder() {
   try {
     const results = [];
 
-    await new Promise(res => setTimeout(res, 4500)); // delay before delivering codes
+    await new Promise(res => setTimeout(res, 45000)); // delay before delivering codes
 
     for (const r of requests) {
       const data = await jsonpRequest(WEB_APP_URL, {
@@ -420,6 +420,7 @@ on(shareBtn, 'click', async (e) => {
 // Footer year
 const yearEl = document.getElementById('year');
 if (yearEl) yearEl.textContent = new Date().getFullYear();
+
 
 
 
