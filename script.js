@@ -163,120 +163,157 @@ async function generateOrder() {
   const note  = (document.getElementById('buyerNote')  || {}).value?.trim() || '';
 
   if (state.total <= 0) { alert('Please add at least one coupon.'); return; }
-  if (phone && !/^\d{10}$/.test(phone)) { alert('Enter a valid 10-digit phone number, or leave it empty.'); return; }
+  if (phone && !/^\d{10}$/.test(phone)) {
+    alert('Enter a valid 10-digit phone number, or leave it empty.');
+    return;
+  }
 
-  // Build receipt (left panel)
-  // --- compute values again so the receipt matches checkout ---
-const subForReceipt = Object.entries(state.items).reduce((acc, [id, q]) => {
-  const item = CATALOG.find(i => i.id === id);
-  const qty = Number(q) || 0;
-  return acc + (item ? item.price * qty : 0);
-}, 0);
-const totalQtyForReceipt = Object.values(state.items).reduce((a, n) => a + (Number(n) || 0), 0);
-const eligibleOffer = totalQtyForReceipt >= OFFER_MIN_QTY;
-const discountForReceipt = (state.offerApplied && eligibleOffer) ? Math.round(subForReceipt * OFFER_RATE) : 0;
-const feeForReceipt = subForReceipt > 0 ? PLATFORM_FEE : 0;
-const grandTotal = subForReceipt - discountForReceipt + feeForReceipt;
-
- // ===== receipt HTML =====
-if (receiptBody) {
-  receiptBody.innerHTML = `
-    <div style="display:flex; justify-content:space-between; gap:6px;">
-      <div>
-        <div><strong>Order ID:</strong> ${orderId}</div>
-        <div class="muted">Date: ${now.toLocaleString()}</div>
-      </div>
-      <div style="text-align:right;">
-        ${name ? `<div><strong>Name:</strong> ${escapeHtml(name)}</div>` : ''}
-        ${phone ? `<div class="muted">Phone: ${phone}</div>` : ''}
-      </div>
-    </div>
-
-    <div class="divider"></div>
-
-    <table style="width:100%; border-collapse: collapse; font-size:14px;">
-      <thead>
-        <tr style="text-align:left; color: var(--muted);">
-          <th>Item</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Amount</th>
-        </tr>
-      </thead>
-      <tbody>${lines}</tbody>
-      <tfoot>
-        <tr>
-          <td></td>
-          <td style="text-align:right; color: var(--muted);">Subtotal</td>
-          <td style="text-align:right;">₹${subtotalForReceipt}</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td style="text-align:right; color: var(--muted);">Discount</td>
-          <td style="text-align:right;">-₹${discountForReceipt}</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td style="text-align:right; color: var(--muted);">Fee</td>
-          <td style="text-align:right;">₹${PLATFORM_FEE}</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td style="text-align:right; font-weight:800;">Total</td>
-          <td style="text-align:right; font-weight:800;">₹${grandTotal}</td>
-        </tr>
-      </tfoot>
-    </table>
-
-    ${note ? `<div class="divider"></div><div class="muted"><strong>Note:</strong> ${escapeHtml(note)}</div>` : ''}
-
-    <div class="divider"></div>
-    <div class="notice">
-      Paid via UPI (UPI: ${document.getElementById('upiId')?.textContent || ''}). 
-      Attach payment screenshot when you share.
-    </div>
-  `;
-}
-
-// ===== WhatsApp message =====
-let msg = `*Coupon Order*%0AOrder ID: ${orderId}%0ATotal: ₹${grandTotal}%0AItems:%0A` +
-  Object.entries(state.items)
-    .filter(([_, q]) => q > 0)
+  // Build the line items for the receipt table
+  const lines = Object.entries(state.items)
+    .filter(([_, q]) => Number(q) > 0)
     .map(([id, q]) => {
       const item = CATALOG.find(i => i.id === id);
-      return `- ${item.title} x ${q}`;
-    })
-    .join('%0A');
+      const qty  = Number(q) || 0;
+      const amt  = item ? item.price * qty : 0;
+      return `<tr>
+        <td>${item ? item.title : id}</td>
+        <td style="text-align:center;">${qty}</td>
+        <td style="text-align:right;">₹${amt}</td>
+      </tr>`;
+    }).join('');
 
-if (name)  msg = `*Coupon Order*%0AOrder ID: ${orderId}%0AName: ${encodeURIComponent(name)}%0A` + msg.slice('*Coupon Order*%0A'.length);
-if (phone) msg += `%0APhone: ${phone}`;
-if (note)  msg += `%0ANote: ${encodeURIComponent(note)}`;
-if (discountForReceipt > 0) msg += `%0ADiscount: ₹${discountForReceipt}`;
-msg += `%0A%0A*To pay:* ₹${grandTotal}`;
+  // Order meta
+  const now = new Date();
+  const orderId =
+    'ORD' +
+    now.getFullYear().toString().slice(-2) +
+    (now.getMonth() + 1).toString().padStart(2, '0') +
+    now.getDate().toString().padStart(2, '0') +
+    '-' +
+    Math.random().toString(36).slice(2, 6).toUpperCase();
 
-const shareBtn = document.getElementById('shareWA');
-if (shareBtn) {
-  shareBtn.href = `https://api.whatsapp.com/send?phone=918757275722&text=${msg}`;
-}
+  const orderStatus = document.getElementById('orderStatus');
+  if (orderStatus) orderStatus.textContent = 'Pending Payment';
 
+  const receiptBody = document.getElementById('receiptBody');
 
-  // ===== Fetch codes from Apps Script for each requested type (JSONP to avoid CORS) =====
+  // --- Recompute money/qty for receipt (to match checkout) ---
+  const subForReceipt = Object.entries(state.items).reduce((acc, [id, q]) => {
+    const item = CATALOG.find(i => i.id === id);
+    const qty  = Number(q) || 0;
+    return acc + (item ? item.price * qty : 0);
+  }, 0);
+
+  const totalQtyForReceipt = Object.values(state.items)
+    .reduce((a, n) => a + (Number(n) || 0), 0);
+
+  const eligibleOffer      = totalQtyForReceipt >= OFFER_MIN_QTY;
+  const discountForReceipt = (state.offerApplied && eligibleOffer)
+    ? Math.round(subForReceipt * OFFER_RATE)
+    : 0;
+
+  const feeForReceipt = subForReceipt > 0 ? PLATFORM_FEE : 0;
+  const grandTotal    = subForReceipt - discountForReceipt + feeForReceipt;
+
+  // ===== receipt HTML =====
+  if (receiptBody) {
+    receiptBody.innerHTML = `
+      <div style="display:flex; justify-content:space-between; gap:6px;">
+        <div>
+          <div><strong>Order ID:</strong> ${orderId}</div>
+          <div class="muted">Date: ${now.toLocaleString()}</div>
+        </div>
+        <div style="text-align:right;">
+          ${name  ? `<div><strong>Name:</strong> ${escapeHtml(name)}</div>` : ''}
+          ${phone ? `<div class="muted">Phone: ${phone}</div>` : ''}
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <table style="width:100%; border-collapse: collapse; font-size:14px;">
+        <thead>
+          <tr style="text-align:left; color: var(--muted);">
+            <th>Item</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>${lines}</tbody>
+        <tfoot>
+          <tr>
+            <td></td>
+            <td style="text-align:right; color: var(--muted);">Subtotal</td>
+            <td style="text-align:right;">₹${subForReceipt}</td>
+          </tr>
+          ${discountForReceipt > 0 ? `
+          <tr>
+            <td></td>
+            <td style="text-align:right; color: var(--muted);">Discount (10% off)</td>
+            <td style="text-align:right;">-₹${discountForReceipt}</td>
+          </tr>` : ``}
+          <tr>
+            <td></td>
+            <td style="text-align:right; color: var(--muted);">Fee</td>
+            <td style="text-align:right;">₹${feeForReceipt}</td>
+          </tr>
+          <tr>
+            <td></td>
+            <td style="text-align:right; font-weight:800;">Total</td>
+            <td style="text-align:right; font-weight:800;">₹${grandTotal}</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      ${note ? `<div class="divider"></div><div class="muted"><strong>Note:</strong> ${escapeHtml(note)}</div>` : ''}
+
+      <div class="divider"></div>
+      <div class="notice">
+        Paid via UPI (UPI: ${document.getElementById('upiId')?.textContent || ''}).
+        Attach payment screenshot when you share.
+      </div>
+    `;
+  }
+
+  // ===== WhatsApp message =====
+  let msg =
+    `*Coupon Order*%0AOrder ID: ${orderId}%0ATotal: ₹${grandTotal}%0AItems:%0A` +
+    Object.entries(state.items)
+      .filter(([_, q]) => Number(q) > 0)
+      .map(([id, q]) => {
+        const item = CATALOG.find(i => i.id === id);
+        return `- ${item ? item.title : id} x ${q}`;
+      })
+      .join('%0A');
+
+  if (name)  msg = `*Coupon Order*%0AOrder ID: ${orderId}%0AName: ${encodeURIComponent(name)}%0A` + msg.slice('*Coupon Order*%0A'.length);
+  if (phone) msg += `%0APhone: ${phone}`;
+  if (note)  msg += `%0ANote: ${encodeURIComponent(note)}`;
+  if (discountForReceipt > 0) msg += `%0ADiscount: ₹${discountForReceipt}`;
+  msg += `%0A%0A*To pay:* ₹${grandTotal}`;
+
+  // Use the existing top-level shareBtn
+  if (shareBtn) {
+    shareBtn.href = `https://api.whatsapp.com/send?phone=918757275722&text=${msg}`;
+  }
+
+  // ===== Fetch codes (delay 4.5s so they click WhatsApp first) =====
   const requests = Object.entries(state.items)
-    .filter(([_, q]) => q > 0)
+    .filter(([_, q]) => Number(q) > 0)
     .map(([id, q]) => ({ type: TYPE_MAP[id], qty: Number(q) }));
 
   try {
-  const results = [];
-  // delay codes after whatsapp share clicking
-  await new Promise(res => setTimeout(res, 4500));
+    const results = [];
 
-  for (const r of requests) {
+    await new Promise(res => setTimeout(res, 4500)); // delay before delivering codes
+
+    for (const r of requests) {
       const data = await jsonpRequest(WEB_APP_URL, {
         token: SECRET_TOKEN,
-        type: r.type,
-        qty: String(r.qty),
+        type:  r.type,
+        qty:   String(r.qty),
         orderId
       });
       results.push({ req: r, ok: !!data.ok, codes: data.codes || [], error: data.error });
-  }
-
+    }
 
     const blocks = results.map(x => {
       if (!x.ok) return `<div class="notice">(${x.req.type}) ${x.error || 'failed'}</div>`;
@@ -292,7 +329,7 @@ if (shareBtn) {
       `;
     }
 
-    // Update local stock numbers
+    // Update local stock
     results.forEach(r => {
       if (r.ok) {
         const cat = CATALOG.find(c => TYPE_MAP[c.id] === r.req.type);
@@ -383,6 +420,7 @@ on(shareBtn, 'click', async (e) => {
 // Footer year
 const yearEl = document.getElementById('year');
 if (yearEl) yearEl.textContent = new Date().getFullYear();
+
 
 
 
