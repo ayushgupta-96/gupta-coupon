@@ -178,44 +178,83 @@ const discountForReceipt = (state.offerApplied && eligibleOffer) ? Math.round(su
 const feeForReceipt = subForReceipt > 0 ? PLATFORM_FEE : 0;
 const grandTotal = subForReceipt - discountForReceipt + feeForReceipt;
 
-  <tfoot>
-  <tr>
-    <td></td>
-    <td style="text-align:right; color: var(--muted);">Fee</td>
-    <td style="text-align:right;">₹${feeForReceipt}</td>
-  </tr>
-  ${discountForReceipt > 0
-    ? `<tr><td></td><td style="text-align:right; color: var(--muted);">Discount (10% off)</td><td style="text-align:right;">–₹${discountForReceipt}</td></tr>`
-    : ''
-  }
-  <tr>
-    <td></td>
-    <td style="text-align:right; font-weight:800;">Total</td>
-    <td style="text-align:right; font-weight:800;">₹${grandTotal}</td>
-  </tr>
-</tfoot>
+ // ===== receipt HTML =====
+if (receiptBody) {
+  receiptBody.innerHTML = `
+    <div style="display:flex; justify-content:space-between; gap:6px;">
+      <div>
+        <div><strong>Order ID:</strong> ${orderId}</div>
+        <div class="muted">Date: ${now.toLocaleString()}</div>
+      </div>
+      <div style="text-align:right;">
+        ${name ? `<div><strong>Name:</strong> ${escapeHtml(name)}</div>` : ''}
+        ${phone ? `<div class="muted">Phone: ${phone}</div>` : ''}
+      </div>
+    </div>
 
-      </table>
-      ${note ? `<div class="divider"></div><div class="muted"><strong>Note:</strong> ${escapeHtml(note)}</div>` : ''}
-      <div class="divider"></div>
-      <div class="notice">Paid via UPI (UPI: ${document.getElementById('upiId')?.textContent || ''}). Attach payment screenshot when you share.</div>
-    `;
-  }
+    <div class="divider"></div>
 
-  // WhatsApp message
-  let msg = `*Coupon Order*%0AOrder ID: ${orderId}%0ATotal: ₹${state.total}%0AItems:%0A` +
-    Object.entries(state.items).filter(([_,q])=>q>0)
-      .map(([id,q])=>{ const item = CATALOG.find(i=>i.id===id); return `- ${item.title} x ${q}`; })
-      .join('%0A');
-  if (name)  msg = `*Coupon Order*%0AOrder ID: ${orderId}%0AName: ${encodeURIComponent(name)}%0A` + msg.slice('*Coupon Order*%0A'.length);
-  if (phone) msg += `%0APhone: ${phone}`;
-  if (note)  msg += `%0ANote: ${encodeURIComponent(note)}`;
-  if (discountForReceipt > 0) {
-  msg += `%0ADiscount: ₹${discountForReceipt}`;
+    <table style="width:100%; border-collapse: collapse; font-size:14px;">
+      <thead>
+        <tr style="text-align:left; color: var(--muted);">
+          <th>Item</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>${lines}</tbody>
+      <tfoot>
+        <tr>
+          <td></td>
+          <td style="text-align:right; color: var(--muted);">Subtotal</td>
+          <td style="text-align:right;">₹${subtotalForReceipt}</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td style="text-align:right; color: var(--muted);">Discount</td>
+          <td style="text-align:right;">-₹${discountForReceipt}</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td style="text-align:right; color: var(--muted);">Fee</td>
+          <td style="text-align:right;">₹${PLATFORM_FEE}</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td style="text-align:right; font-weight:800;">Total</td>
+          <td style="text-align:right; font-weight:800;">₹${grandTotal}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    ${note ? `<div class="divider"></div><div class="muted"><strong>Note:</strong> ${escapeHtml(note)}</div>` : ''}
+
+    <div class="divider"></div>
+    <div class="notice">
+      Paid via UPI (UPI: ${document.getElementById('upiId')?.textContent || ''}). 
+      Attach payment screenshot when you share.
+    </div>
+  `;
 }
 
-  const shareBtn = document.getElementById('shareWA');
-if (shareBtn) shareBtn.href = `https://api.whatsapp.com/send?phone=918757275722&text=${msg}`;
+// ===== WhatsApp message =====
+let msg = `*Coupon Order*%0AOrder ID: ${orderId}%0ATotal: ₹${grandTotal}%0AItems:%0A` +
+  Object.entries(state.items)
+    .filter(([_, q]) => q > 0)
+    .map(([id, q]) => {
+      const item = CATALOG.find(i => i.id === id);
+      return `- ${item.title} x ${q}`;
+    })
+    .join('%0A');
+
+if (name)  msg = `*Coupon Order*%0AOrder ID: ${orderId}%0AName: ${encodeURIComponent(name)}%0A` + msg.slice('*Coupon Order*%0A'.length);
+if (phone) msg += `%0APhone: ${phone}`;
+if (note)  msg += `%0ANote: ${encodeURIComponent(note)}`;
+if (discountForReceipt > 0) msg += `%0ADiscount: ₹${discountForReceipt}`;
+msg += `%0A%0A*To pay:* ₹${grandTotal}`;
+
+const shareBtn = document.getElementById('shareWA');
+if (shareBtn) {
+  shareBtn.href = `https://api.whatsapp.com/send?phone=918757275722&text=${msg}`;
+}
 
 
   // ===== Fetch codes from Apps Script for each requested type (JSONP to avoid CORS) =====
@@ -344,6 +383,7 @@ on(shareBtn, 'click', async (e) => {
 // Footer year
 const yearEl = document.getElementById('year');
 if (yearEl) yearEl.textContent = new Date().getFullYear();
+
 
 
 
