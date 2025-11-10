@@ -101,3 +101,129 @@ footer { margin-top: 22px; font-size: 12px; color: var(--muted); display: flex; 
   border-radius: 10px;
   display: block;
 }
+/* ---------- Mobile polish ---------- */
+
+/* Make the grid collapse on small screens */
+@media (max-width: 900px) {
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* Tighten cards a bit on phones */
+@media (max-width: 600px) {
+  :root {
+    --pad: 14px;
+    --radius: 14px;
+  }
+  body {
+    font-size: 16px;              /* readable base size */
+    line-height: 1.35;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  header .title {
+    font-size: clamp(18px, 5vw, 22px);
+  }
+
+  .container {
+    padding: 12px;
+  }
+
+  .card {
+    padding: var(--pad);
+    border-radius: var(--radius);
+  }
+
+  /* Product card content */
+  .coupon {
+    padding: 14px;
+  }
+  .coupon strong {
+    font-size: 16px;
+    line-height: 1.2;
+    word-break: break-word;       /* avoid overflow of long titles */
+  }
+  .coupon .muted {
+    font-size: 13px;
+  }
+
+  /* Price + quantity align better on narrow screens */
+  .price {
+    margin-top: 8px;
+    font-weight: 600;
+  }
+
+  .qty {
+    margin-top: 8px;
+    width: 100%;
+  }
+  .qty input[type="number"] {
+    width: 100%;
+    height: 44px;
+    font-size: 16px;              /* prevents iOS zoom-on-focus */
+    padding: 8px 12px;
+    border-radius: 10px;
+  }
+
+  /* Remove tiny number spinners (WebKit) */
+  .qty input[type=number]::-webkit-outer-spin-button,
+  .qty input[type=number]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .qty input[type=number] {
+    -moz-appearance: textfield;
+  }
+
+  /* QR/pay panel spacing */
+  .qr-wrap {
+    display: grid;
+    grid-template-columns: 84px 1fr;
+    align-items: center;
+    gap: 12px;
+  }
+  .qr img, .qr {
+    width: 84px;
+    height: 84px;
+  }
+
+  /* Summary table and receipt text sizes */
+  #priceSummary .sum-row span,
+  #priceSummary .sum-row strong,
+  #receiptBody {
+    font-size: 14px;
+  }
+
+  /* Buttons: make them full-width and comfy to tap */
+  .btn,
+  .btn.btn-primary,
+  .btn.btn-outline,
+  .btn.btn-danger {
+    width: 100%;
+    height: 44px;
+    font-size: 16px;
+    justify-content: center;
+  }
+
+  /* Space stacked buttons nicely */
+  .card .btn + .btn {
+    margin-top: 10px;
+  }
+}
+
+/* Prevent long UPI IDs / notes from overflowing */
+.notice, .muted, #receiptBody, #upiId {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Slightly darker card bg in dark theme for contrast (optional) */
+@media (prefers-color-scheme: dark) {
+  .card {
+    background: rgba(255,255,255,0.04);
+  }
+}
+
