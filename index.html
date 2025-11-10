@@ -49,10 +49,31 @@
         <div class="divider"></div>
 
         <div class="summary" id="priceSummary">
-          <div class="sum-row"><span>Subtotal</span><strong id="subtotal">₹0</strong></div>
-          <div class="sum-row"><span>Platform fee</span><span id="fee">₹0</span></div>
-          <div class="sum-row total"><span>Total to pay</span><span id="total">₹0</span></div>
-        </div>
+  <div class="sum-row">
+    <span>Subtotal</span><strong id="subtotal">₹0</strong>
+  </div>
+
+  <div class="sum-row" style="gap:10px;">
+    <label style="display:flex;gap:8px;align-items:center;cursor:pointer;">
+      <input type="checkbox" id="applyOffer" />
+      <span>Apply 10% Off (100+ qty)</span>
+    </label>
+    <span class="muted" id="offerStatus" style="margin-left:auto;">Not eligible</span>
+  </div>
+
+  <div class="sum-row" id="discountRow" style="display:none;">
+    <span>Discount</span><span id="discount">–₹0</span>
+  </div>
+
+  <div class="sum-row">
+    <span>Platform fee</span><span id="fee">₹0</span>
+  </div>
+
+  <div class="sum-row total">
+    <span>Total to pay</span><span id="total">₹0</span>
+  </div>
+</div>
+
 
         <div style="display:flex; gap:10px; margin-top:12px; flex-wrap: wrap;">
           <button class="btn btn-primary" id="makeOrder">Generate order</button>
@@ -118,3 +139,4 @@
   <script src="script.js"></script>
 </body>
 </html>
+
