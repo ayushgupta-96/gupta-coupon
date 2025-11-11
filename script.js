@@ -73,6 +73,36 @@ applyOfferEl?.addEventListener('change', () => {
   state.offerApplied = applyOfferEl.checked;
   recalc();
 });
+// ---------- Step navigation helpers ----------
+function goTo(stepNum) {
+  ['step1','step2','step3'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.toggle('active', id === `step${stepNum}`);
+  });
+  // update step nav dots
+  document.querySelectorAll('#stepNav [data-step]').forEach(b=>{
+    b.classList.toggle('active', Number(b.dataset.step) === stepNum);
+  });
+  // scroll top of step
+  const topEl = document.getElementById(`step${stepNum}`);
+  if(topEl) topEl.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// wire up nav buttons (if present)
+document.addEventListener('click', function(e){
+  const t = e.target;
+  if(t && t.matches('[data-step]')) {
+    const s = Number(t.dataset.step) || 1;
+    goTo(s);
+  }
+});
+const goPaymentBtn = document.getElementById('goPayment');
+if (goPaymentBtn) goPaymentBtn.addEventListener('click', ()=> goTo(2));
+const backToCartBtn = document.getElementById('backToCart');
+if (backToCartBtn) backToCartBtn.addEventListener('click', ()=> goTo(1));
+const backToPayBtn = document.getElementById('backToPay');
+if (backToPayBtn) backToPayBtn.addEventListener('click', ()=> goTo(2));
 
 // ====== 2) RENDER LIST ======
 function renderCoupons(){
@@ -473,6 +503,7 @@ on(shareBtn, 'click', async (e) => {
 // Footer year
 const yearEl = document.getElementById('year');
 if (yearEl) yearEl.textContent = new Date().getFullYear();
+
 
 
 
