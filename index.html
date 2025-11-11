@@ -22,87 +22,97 @@
       <span class="badge">Beginner Friendly</span>
     </header>
 
-    <div class="grid" id="app">
-      <!-- Left: Coupons + Buyer details -->
-      <section class="card">
-        <div class="section-title">Flipkart coupons</div>
-        <div class="list" id="couponList"></div>
+    <!-- MOBILE STEPS: step1 = cart, step2 = payment/receipt, step3 = delivered codes -->
+<nav class="step-nav" id="stepNav">
+  <button data-step="1" class="step-dot active">1</button>
+  <button data-step="2" class="step-dot">2</button>
+  <button data-step="3" class="step-dot">3</button>
+</nav>
 
+<div class="grid" id="app-steps">
+
+  <!-- STEP 1: Products + details + totals (wrap your left card) -->
+  <section class="card step active" id="step1">
+    <!-- PASTE your existing LEFT CARD content here -->
+    <div class="section-title">Flipkart coupons</div>
+    <div class="list" id="couponList"></div>
+
+    <div class="divider"></div>
+
+    <div class="section-title">Your details (optional)</div>
+    <div class="row">
+      <div>
+        <label for="buyerName">Name</label>
+        <input id="buyerName" placeholder="e.g., Rohan Kumar" />
+      </div>
+      <div>
+        <label for="buyerPhone">Phone</label>
+        <input id="buyerPhone" placeholder="10-digit number" />
+      </div>
+    </div>
+    <div style="margin-top: 10px;">
+      <label for="buyerNote">Note (optional)</label>
+      <textarea id="buyerNote" rows="2" placeholder="Any special request..."></textarea>
+    </div>
+
+    <div class="divider"></div>
+    <div id="priceSummary"></div>
+
+    <div style="display:flex; gap:10px; margin-top:12px; flex-wrap: wrap;">
+      <button class="btn btn-primary" id="makeOrder">Generate order</button>
+      <button class="btn btn-outline" id="clearAll">Reset</button>
+    </div>
+  </section>
+
+  <!-- STEP 2: Payment + QR + Receipt (wrap your right card) -->
+  <section class="card step" id="step2">
+    <div class="section-title">Pay by UPI QR</div>
+
+    <div class="qr-wrap">
+      <div class="qr">
+        <img id="qrImage" src="qr.png" alt="Your UPI QR" />
+      </div>
+      <div>
+        <div style="font-weight:700;">Scan & Pay</div>
+        <div class="muted">UPI ID: <span id="upiId">paytmqr5i37ho@ptys</span></div>
         <div class="divider"></div>
+        <div class="notice">Manual verification: Payments are checked by you. This page does not auto-confirm UPI.</div>
+      </div>
+    </div>
 
-        <div class="section-title">Your details (optional)</div>
-        <div class="row">
-          <div>
-            <label for="buyerName">Name</label>
-            <input id="buyerName" placeholder="e.g., Rohan Kumar" />
-          </div>
-          <div>
-            <label for="buyerPhone">Phone</label>
-            <input id="buyerPhone" placeholder="10-digit number" />
-          </div>
-        </div>
-        <div style="margin-top: 10px;">
-          <label for="buyerNote">Note (optional)</label>
-          <textarea id="buyerNote" rows="2" placeholder="Any special request..."></textarea>
-        </div>
+    <div class="divider"></div>
 
-        <div class="divider"></div>
+    <div id="receipt">
+      <h3 style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+        <span>Order Summary</span>
+        <span class="badge" id="orderStatus">Draft</span>
+      </h3>
+      <div id="receiptBody" class="muted">No items yet. Choose coupons and click “Generate order”.</div>
+    </div>
 
-        <div class="summary" id="priceSummary">
-  <div class="sum-row">
-    <span>Subtotal</span><strong id="subtotal">₹0</strong>
-  </div>
+    <div style="display:flex; gap:10px; margin-top:12px; flex-wrap: wrap;">
+      <button class="btn btn-outline" id="backToCart">Back</button>
+      <a class="btn btn-outline" id="shareWA" href="#" target="_blank" rel="noopener">Send on WhatsApp</a>
+      <button class="btn btn-danger" id="printPdf">Print / Save as PDF</button>
+    </div>
 
-  <div class="sum-row" style="gap:10px;">
-    <label style="display:flex;gap:8px;align-items:center;cursor:pointer;">
-      <input type="checkbox" id="applyOffer" />
-      <span>Apply 10% Off (100+ qty)</span>
-    </label>
-    <span class="muted" id="offerStatus" style="margin-left:auto;">Not eligible</span>
-  </div>
+    <div id="proofPreviewWrap" class="muted" style="display:none; margin-top:8px;">
+      <div style="font-size:12px; margin-bottom:6px;">Attached screenshot:</div>
+      <img id="proofPreview" alt="Payment screenshot" />
+    </div>
+  </section>
 
-  <div class="sum-row" id="discountRow" style="display:none;">
-    <span>Discount</span><span id="discount">–₹0</span>
-  </div>
+  <!-- STEP 3: Delivered Codes only -->
+  <section class="card step" id="step3">
+    <div class="section-title">Delivered codes</div>
+    <div id="deliveredCodes" class="muted">Codes will appear here after payment/share.</div>
+    <div class="step-controls" style="margin-top:10px;">
+      <button class="btn btn-outline" id="backToPay">Back to payment</button>
+    </div>
+  </section>
 
-  <div class="sum-row">
-    <span>Platform fee</span><span id="fee">₹0</span>
-  </div>
-
-  <div class="sum-row total">
-    <span>Total to pay</span><span id="total">₹0</span>
-  </div>
 </div>
-
-
-        <div style="display:flex; gap:10px; margin-top:12px; flex-wrap: wrap;">
-          <button class="btn btn-primary" id="makeOrder">Generate order</button>
-          <button class="btn btn-outline" id="clearAll">Reset</button>
-        </div>
-        <p class="notice" style="margin-top: 8px;">
-          Tip: After payment, come back here, fill details (optional), generate order, then upload and send your payment screenshot.
-        </p>
-      </section>
-
-      <!-- Right: Pay by QR + Receipt preview -->
-      <section class="card">
-        <div class="section-title">Pay by UPI QR</div>
-
-        <div class="qr-wrap">
-          <div class="qr">
-            <img id="qrImage" src="qr.png" alt="Your UPI QR" />
-          </div>
-          <div>
-            <div style="font-weight:700;">Scan & Pay</div>
-            <div class="muted">UPI ID: <span id="upiId">paytmqr5i37ho@ptys</span></div>
-            <div class="divider"></div>
-            <div class="notice">Manual verification: Payments are checked by you. This page does not auto-confirm UPI.</div>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <!-- ORDER SUMMARY (used by JS) -->
+<!-- ORDER SUMMARY (used by JS) -->
         <div id="receipt">
           <h3 style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
             <span>Order Summary</span>
@@ -138,7 +148,7 @@
 
   <script src="script.js"></script>
 
-  <!-- STEP NAV (mobile only) -->
+  <!-- <!-- STEP NAV (mobile only) -->
 <nav class="step-nav" id="stepNav">
   <button data-step="1" class="step-dot active">1</button>
   <button data-step="2" class="step-dot">2</button>
@@ -178,6 +188,7 @@
 </div>
 
 </body>
-</html>
+</html> -->
+
 
 
