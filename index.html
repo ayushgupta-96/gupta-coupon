@@ -137,6 +137,47 @@
   </div><!-- /.container -->
 
   <script src="script.js"></script>
+
+  <!-- STEP NAV (mobile only) -->
+<nav class="step-nav" id="stepNav">
+  <button data-step="1" class="step-dot active">1</button>
+  <button data-step="2" class="step-dot">2</button>
+  <button data-step="3" class="step-dot">3</button>
+</nav>
+
+<div class="grid">
+
+  <!-- STEP 1: Products + details + totals (wrap your left card) -->
+  <section class="card step" id="step1">
+    <!-- keep your existing left-card content here (coupons, Your details, totals) -->
+    <!-- IMPORTANT: keep your existing Generate order button with id="makeOrder" -->
+    <!-- Add a helper button for back/next (mobile) -->
+    <div class="step-controls">
+      <button class="btn btn-primary" id="goPayment">Continue to payment</button>
+    </div>
+  </section>
+
+  <!-- STEP 2: Payment + QR + Receipt (wrap your right card) -->
+  <section class="card step" id="step2">
+    <!-- keep your existing right-card content here (QR, shareWA, receipt) -->
+    <div class="step-controls two">
+      <button class="btn btn-outline" id="backToCart">Back</button>
+      <a class="btn btn-primary" id="shareWA" href="#" target="_blank" rel="noopener">Send on WhatsApp</a>
+    </div>
+  </section>
+
+  <!-- STEP 3: Delivered Codes only (new) -->
+  <section class="card step" id="step3">
+    <div class="section-title">Delivered codes</div>
+    <div id="deliveredCodes" class="muted">Codes will appear here after payment/share.</div>
+    <div class="step-controls">
+      <button class="btn btn-outline" id="backToPay">Back to payment</button>
+    </div>
+  </section>
+
+</div>
+
 </body>
 </html>
+
 
