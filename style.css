@@ -253,5 +253,19 @@ footer { margin-top: 22px; font-size: 12px; color: var(--muted); display: flex; 
   .step .container { padding: 10px; font-size: 15px; }
 }
 
+/* Step UI */
+.step { display: none; width:100%; box-sizing:border-box; }
+.step.active { display:block; }
+.step-nav { position:fixed; left:12px; right:12px; bottom:12px; display:flex; gap:8px; justify-content:center; z-index:30; }
+.step-dot { width:36px; height:36px; border-radius:50%; border:none; background:#2a2a2a; color:#fff; font-weight:700; }
+.step-dot.active { background:#0b84ff; }
+
+/* small adjustments for mobile spacing */
+@media (max-width:640px){
+  .grid { display:block; }
+  .card { margin-bottom:12px; }
+  .step-nav { bottom:8px; }
+}
+
 
 
