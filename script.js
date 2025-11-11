@@ -1,3 +1,33 @@
+// ----- Mobile stepper -----
+let CURRENT_STEP = 1;
+const steps = [null, document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')];
+const stepNav = document.getElementById('stepNav');
+
+function goTo(step){
+  CURRENT_STEP = step;
+  for (let i=1;i<=3;i++){
+    steps[i]?.classList.toggle('active', i===step);
+    stepNav?.querySelectorAll('.step-dot')?.[i-1]?.classList.toggle('active', i===step);
+  }
+  // scroll top on mobile
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// default: show step 1 on mobile, all visible on desktop by CSS
+goTo(1);
+
+// nav taps
+stepNav?.addEventListener('click', (e)=>{
+  const btn = e.target.closest('[data-step]');
+  if (!btn) return;
+  goTo(Number(btn.dataset.step));
+});
+
+// simple “Continue to payment / Back” buttons
+document.getElementById('goPayment')?.addEventListener('click', ()=> goTo(2));
+document.getElementById('backToCart')?.addEventListener('click', ()=> goTo(1));
+document.getElementById('backToPay')?.addEventListener('click', ()=> goTo(2));
+
 // ---- BACKEND (Google Apps Script) CONFIG ----
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbytsOYztcywQo-7dceAzPlc_XD_CeOc32vXLAunqNnmrqVEog-Nf9c_JuJ5RCsbaA6YfQ/exec";
 const SECRET_TOKEN = "Niraj@9631"; // must match the token in Apps Script
@@ -294,6 +324,8 @@ async function generateOrder() {
   if (shareBtn) {
     shareBtn.href = `https://api.whatsapp.com/send?phone=918757275722&text=${msg}`;
   }
+// Move to payment step (for mobile)
+goTo(2);
 
   // ===== Fetch codes (delay 4.5s so they click WhatsApp first) =====
   const requests = Object.entries(state.items)
@@ -328,6 +360,12 @@ async function generateOrder() {
         <div style="margin-top:6px">${blocks}</div>
       `;
     }
+// Copy codes to Step 3 and show that step on mobile
+const delivered = document.getElementById('deliveredCodes');
+if (delivered) {
+  delivered.innerHTML = blocks;
+}
+goTo(3);
 
     // Update local stock
     results.forEach(r => {
@@ -420,6 +458,7 @@ on(shareBtn, 'click', async (e) => {
 // Footer year
 const yearEl = document.getElementById('year');
 if (yearEl) yearEl.textContent = new Date().getFullYear();
+
 
 
 
