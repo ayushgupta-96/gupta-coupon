@@ -409,6 +409,21 @@ function clearAll(){
   document.getElementById('orderStatus').textContent = 'Draft';
   document.getElementById('shareWA').href = '#';
 }
+// Step navigation helper (shows the requested step number 1|2|3)
+function goTo(stepNum) {
+  // accepted ids: step1, step2, step3
+  const steps = ['step1','step2','step3'];
+  steps.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (id === `step${stepNum}`) el.classList.add('active');
+    else el.classList.remove('active');
+  });
+
+  // optional: on mobile, scroll to top of chosen step
+  const topEl = document.getElementById(`step${stepNum}`);
+  if (topEl) topEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 // ====== 6) INIT ======
 renderCoupons();
@@ -458,6 +473,7 @@ on(shareBtn, 'click', async (e) => {
 // Footer year
 const yearEl = document.getElementById('year');
 if (yearEl) yearEl.textContent = new Date().getFullYear();
+
 
 
 
