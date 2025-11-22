@@ -274,6 +274,8 @@ async function generateOrder() {
 
   const feeForReceipt = subForReceipt > 0 ? PLATFORM_FEE : 0;
   const grandTotal    = subForReceipt - discountForReceipt + feeForReceipt;
+window._lastOrderId    = orderId;
+window._lastGrandTotal = grandTotal;
 
   // ===== receipt HTML =====
   if (receiptBody) {
@@ -357,59 +359,61 @@ async function generateOrder() {
 // Move to payment step (for mobile)
 goTo(2);
 
-  // ===== Fetch codes (delay 4.5s so they click WhatsApp first) =====
-  const requests = Object.entries(state.items)
-    .filter(([_, q]) => Number(q) > 0)
-    .map(([id, q]) => ({ type: TYPE_MAP[id], qty: Number(q) }));
+  await deliverCodes(orderId, requests, receiptBody);
+// --- paste this in generateOrder() immediately after:
+//     const results = await deliverCodes(orderId, requests, receiptBody);
 
-  try {
-    const results = [];
+if (Array.isArray(results) && results.length > 0) {
+  // build HTML for step 3 (delivered codes)
+  const step3Html = results.map(x => {
+    if (!x.ok) return `<div class="notice">(${x.req.type}) ${x.error || 'failed'}</div>`;
+    const codesHtml = (x.codes || []).map(c => `<div class="code">${c}</div>`).join('');
+    return `<div>
+              <strong>${x.req.type} codes</strong>
+              <div style="margin-top:6px">${codesHtml}</div>
+            </div>`;
+  }).join('<div class="divider"></div>');
 
-    await new Promise(res => setTimeout(res, 45000)); // delay before delivering codes
+  const deliveredEl = document.getElementById('deliveredCodes');
+  if (deliveredEl) {
+    deliveredEl.innerHTML = step3Html;
+  }
 
-    for (const r of requests) {
-      const data = await jsonpRequest(WEB_APP_URL, {
-        token: SECRET_TOKEN,
-        type:  r.type,
-        qty:   String(r.qty),
-        orderId
-      });
-      results.push({ req: r, ok: !!data.ok, codes: data.codes || [], error: data.error });
-    }
-
-    const blocks = results.map(x => {
-      if (!x.ok) return `<div class="notice">(${x.req.type}) ${x.error || 'failed'}</div>`;
-      const codesHtml = x.codes.map(c => `<code>${c}</code>`).join('<br>');
-      return `<div><strong>${x.req.type} codes</strong><div style="margin-top:4px">${codesHtml}</div></div>`;
-    }).join('<div class="divider"></div>');
-
-    if (receiptBody) {
-      receiptBody.innerHTML += `
-        <div class="divider"></div>
-        <div><strong>Delivered codes</strong></div>
-        <div style="margin-top:6px">${blocks}</div>
-      `;
-    }
-// Copy codes to Step 3 and show that step on mobile
-const delivered = document.getElementById('deliveredCodes');
-if (delivered) {
-  delivered.innerHTML = blocks;
+  // show step 3 on mobile
+  if (typeof goTo === 'function') goTo(3);
 }
-goTo(3);
 
-    // Update local stock
-    results.forEach(r => {
-      if (r.ok) {
-        const cat = CATALOG.find(c => TYPE_MAP[c.id] === r.req.type);
-        if (cat) cat.stock = Math.max(0, cat.stock - r.req.qty);
-      }
+    
+async function deliverCodes(orderId, requests, receiptBody) {
+  const results = [];
+
+  for (const r of requests) {
+    const data = await jsonpRequest(WEB_APP_URL, {
+      token: SECRET_TOKEN,
+      type: r.type,
+      qty: String(r.qty),
+      orderId
     });
-    renderCoupons();
+    results.push({ req: r, ok: !!data.ok, codes: data.codes || [], error: data.error });
+  }
 
-  } catch (err) {
-    if (receiptBody) {
-      receiptBody.innerHTML += `<div class="divider"></div><div class="notice">Fetch failed: ${escapeHtml(String(err))}</div>`;
-    }
+  const blocks = results.map(x => {
+    if (!x.ok) return `<div class="notice">(${x.req.type}) ${x.error || 'failed'}</div>`;
+    const codesHtml = x.codes.map(c => `<code>${c}</code>`).join('<br>');
+    return `<div><strong>${x.req.type} codes</strong><div style="margin-top:4px">${codesHtml}</div></div>`;
+  }).join('<div class="divider"></div>');
+
+  if (receiptBody) {
+    receiptBody.innerHTML += `
+      <div class="divider"></div>
+      <div><strong>Delivered codes</strong></div>
+      <div style="margin-top:6px">${blocks}</div>
+    `;
+  }
+
+  return results;
+}
+
   }
 }
 
@@ -503,6 +507,7 @@ on(shareBtn, 'click', async (e) => {
 // Footer year
 const yearEl = document.getElementById('year');
 if (yearEl) yearEl.textContent = new Date().getFullYear();
+
 
 
 
