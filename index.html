@@ -3,214 +3,207 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Coupon Shop</title>
+  <title>Gupta Coupons</title>
 
   <link rel="stylesheet" href="style.css" />
-  <!-- html2canvas for optional screenshot-to-image feature -->
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <style>
-    /* Minimal step CSS so mobile shows only the active step */
-    .step { display: none; }
-    .step.active { display: block; }
-    .step-nav { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); z-index: 60; display:flex; gap:8px; }
-    .step-dot { width:36px; height:36px; border-radius:50%; background:#333; color:#fff; border:0; }
-    .step-dot.active { background:#2bb673; }
-    @media(min-width:900px) {
-      /* Desktop: show everything (existing grid layout from style.css will manage columns) */
-      .step { display:block !important; }
-      /* --- Hide bottom step buttons on mobile --- */
-.step-nav {
-  display: none !important;
-}
+    .step { display:none; }
+    .step.active { display:block; }
 
+    /* Hide step dots */
+    #stepNav { display:none !important; }
+
+    @media(min-width:900px){
+      .step { display:block !important; }
     }
   </style>
 </head>
+
 <body>
-  <div class="container">
-    <header>
-      <div class="brand">
-        <div class="logo" aria-hidden="true"></div>
-        <div>
-          <div class="title"> Gupta Coupons </div>
-          <div class="muted">Buy discount coupons. Pay via UPI QR.</div>
-        </div>
-      </div>
-      <span class="badge">Gupta coupans </span>
-    </header>
 
-   
+<div class="container">
 
-  <!-- STEPPED LAYOUT -->
-    <div id="app-steps">
+<header>
+  <div class="brand">
+    <div class="logo"></div>
+    <div>
+      <div class="title">Gupta Coupons</div>
+      <div class="muted">Buy discount coupons. Pay via UPI QR.</div>
+    </div>
+  </div>
+  <span class="badge">Coupon Shop</span>
+</header>
 
-      <!-- STEP 1: Cart / choose qty / buyer details -->
-      <section class="card step active" id="step1">
-        <div class="section-title">Flipkart coupons</div>
-        <div class="list" id="couponList"></div>
 
-        <div class="divider"></div>
+<!-- -------------------------------------------------- -->
+<!-- STEPS WRAPPER -->
+<!-- -------------------------------------------------- -->
+<div id="app-steps">
 
-        <div class="section-title">Your details (optional)</div>
-        <div class="row">
-          <div>
-            <label for="buyerName">Name</label>
-            <input id="buyerName" placeholder="e.g., Rohan Kumar" />
-          </div>
-          <div>
-            <label for="buyerPhone">Phone</label>
-            <input id="buyerPhone" placeholder="10-digit number" />
-          </div>
-        </div>
 
-        <div style="margin-top: 10px;">
-          <label for="buyerNote">Note (optional)</label>
-          <textarea id="buyerNote" rows="2" placeholder="Any special request..."></textarea>
-        </div>
+<!-- ========================= -->
+<!-- STEP 1 – BUYER + COUPONS -->
+<!-- ========================= -->
+<section class="card step active" id="step1">
 
-        <div class="divider"></div>
+  <div class="section-title">Flipkart coupons</div>
+  <div class="list" id="couponList"></div>
 
-        <!-- price summary area (script will populate these ids) -->
-        <div class="summary" id="priceSummary">
-          <div class="sum-row">
-            <span>Subtotal</span><strong id="subtotal">₹0</strong>
-          </div>
+  <div class="divider"></div>
 
-          <div class="sum-row" style="gap:10px;">
-            <label style="display:flex;gap:8px;align-items:center;cursor:pointer;">
-              <input type="checkbox" id="applyOffer" />
-              <span>Apply 10% Off (100+ qty)</span>
-            </label>
-            <span class="muted" id="offerStatus" style="margin-left:auto;">Not eligible</span>
-          </div>
+  <div class="section-title">Your details (optional)</div>
 
-          <div class="sum-row" id="discountRow" style="display:none;">
-            <span>Discount</span><span id="discount">–₹0</span>
-          </div>
+  <div class="row">
+    <div>
+      <label>Name</label>
+      <input id="buyerName" placeholder="Your name" />
+    </div>
+    <div>
+      <label>Phone</label>
+      <input id="buyerPhone" placeholder="10-digit number" />
+    </div>
+  </div>
 
-          <div class="sum-row">
-            <span>Platform fee</span><span id="fee">₹0</span>
-          </div>
+  <div style="margin-top:10px;">
+    <label>Note (optional)</label>
+    <textarea id="buyerNote" rows="2"></textarea>
+  </div>
 
-          <div class="sum-row total">
-            <span>Total to pay</span><span id="total">₹0</span>
-          </div>
-        </div>
+  <div class="divider"></div>
 
-        <div style="display:flex; gap:10px; margin-top:12px; flex-wrap: wrap;">
-          <button class="btn btn-primary" id="makeOrder">Generate order</button>
-          <button class="btn btn-outline" id="clearAll">Reset</button>
-          <button class="btn btn-secondary" id="goPayment">Continue to payment</button>
-        </div>
+  <!-- PRICE SUMMARY -->
+  <div id="priceSummary" class="summary">
+    <div class="sum-row"><span>Subtotal</span><strong id="subtotal">₹0</strong></div>
 
-        <p class="notice" style="margin-top: 8px;">
-          Tip: After payment,send the payment screenshot to click “Send on WhatsApp” Then you get the code.
-        </p>
-      </section>
-
-      <!-- STEP 2: Payment + QR + Receipt (visible after user goes to payment) -->
-      <section class="card step" id="step2">
-        <div class="section-title">Pay by UPI QR</div>
-
-        <div class="qr-wrap">
-          <div class="qr">
-            <img id="qrImage" src="qr.png" alt="Your UPI QR" />
-          </div>
-          <div>
-            <div style="font-weight:700;">Scan & Pay</div>
-            <div class="muted">UPI ID: <span id="upiId">paytmqr5i37ho@ptys</span></div>
-            <div class="divider"></div>
-            <div class="notice">Manual verification: Payments are checked by you. This page does not auto-confirm UPI.</div>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <!-- ORDER SUMMARY (populated by JS) -->
-        <div id="receipt" class="card">
-          <h3 style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-            <span>Order Summary</span>
-            <span class="badge" id="orderStatus">Draft</span>
-          </h3>
-          <div id="receiptBody" class="muted">No items yet. Choose coupons and click “Generate order”.</div>
-        </div>
-<div class="divider"></div>
-
-<label for="txnId">UPI Txn / UTR ID</label>
-<input id="txnId" placeholder="Enter UPI Ref / UTR" />
-
-<div style="margin-top:8px;">
-  <button class="btn btn-primary" id="verifyPay">Verify payment & show codes</button>
-</div>
-
-<div id="payStatus" class="muted" style="margin-top:6px;"></div>
-
-        <!-- Upload / Send payment proof -->
-        <div style="display:flex; gap:10px; margin-top:12px; flex-wrap: wrap;">
-         <a class="btn btn-primary" id="shareWA" href="#" target="_blank" rel="noopener">Send on WhatsApp</a>
-        </div>
-
-         <div style="margin-top:12px;">
-          <button class="btn btn-outline" id="backToCart">Back</button>
-          <button class="btn btn-secondary" id="goDelivered">Show delivered codes</button>
-        </div>
-      </section>
-
-      <!-- STEP 3: Delivered Codes only -->
-      <section class="card step" id="step3">
-        <div class="section-title">Delivered codes</div>
-        <div id="deliveredCodes" class="muted">Codes will appear here after payment/share.</div>
-        <div class="step-controls" style="margin-top:10px;">
-          <button class="btn btn-outline" id="backToPay">Back to payment</button>
-        </div>
-      </section>
+    <div class="sum-row">
+      <label style="display:flex;gap:8px;align-items:center;cursor:pointer;">
+        <input type="checkbox" id="applyOffer" />
+        <span>Apply 10% Off (100+ qty)</span>
+      </label>
+      <span id="offerStatus" class="muted" style="margin-left:auto;">Not eligible</span>
     </div>
 
-    <footer>
-      <div>© <span id="year"></span> Gupta booking </div>
-      <div class="notice"> Send payment screenshot on WhatsApp to receive codes. </div>
-    </footer>
-  </div><!-- /.container -->
+    <div class="sum-row" id="discountRow" style="display:none;">
+      <span>Discount</span><span id="discount">–₹0</span>
+    </div>
 
-  <script src="script.js"></script>
+    <div class="sum-row"><span>Platform fee</span><span id="fee">₹0</span></div>
+    <div class="sum-row total"><span>Total to pay</span><span id="total">₹0</span></div>
+  </div>
 
-  <!-- Inline stepper script: keeps stepper initialization last so DOM elements exist -->
-  <script>
-    // ----- Mobile stepper -----
-    let CURRENT_STEP = 1;
-    const steps = [null, document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')];
-    const stepNav = document.getElementById('stepNav');
+  <div style="display:flex;gap:10px;margin-top:12px;">
+    <button class="btn btn-primary" id="makeOrder">Generate order</button>
+    <button class="btn btn-outline" id="clearAll">Reset</button>
+    <button class="btn btn-secondary" id="goPayment">Continue to payment</button>
+  </div>
 
-    function goTo(step){
-      CURRENT_STEP = step;
-      for (let i=1;i<=3;i++){
-        steps[i]?.classList.toggle('active', i===step);
-        const dot = stepNav?.querySelectorAll('.step-dot')?.[i-1];
-        if (dot) dot.classList.toggle('active', i===step);
-      }
-      // scroll top on mobile
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+  <p class="notice" style="margin-top:8px;">
+    After payment, click “Send on WhatsApp” and you will receive the codes automatically.
+  </p>
 
-    // default: show step 1 on mobile
-    goTo(1);
+</section>
 
-    // nav taps
-    stepNav?.addEventListener('click', (e)=>{
-      const btn = e.target.closest('[data-step]');
-      if (!btn) return;
-      goTo(Number(btn.dataset.step));
+
+
+<!-- ========================== -->
+<!-- STEP 2 – PAYMENT + RECEIPT -->
+<!-- ========================== -->
+<section class="card step" id="step2">
+
+  <div class="section-title">Pay by UPI QR</div>
+
+  <div class="qr-wrap">
+    <div class="qr"><img src="qr.png"></div>
+    <div>
+      <b>Scan & Pay</b>
+      <div class="muted">UPI ID: <span id="upiId">paytmqr5i37ho@ptys</span></div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ORDER SUMMARY -->
+  <div id="receipt">
+    <h3 style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Order Summary</span>
+      <span class="badge" id="orderStatus">Draft</span>
+    </h3>
+    <div id="receiptBody" class="muted">No items yet.</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <label>Enter UPI Txn / UTR ID</label>
+  <input id="txnId" placeholder="Enter reference / UTR" />
+
+  <button class="btn btn-primary" id="verifyPay" style="margin-top:10px;">
+    Verify payment & show codes
+  </button>
+
+  <div id="payStatus" class="muted" style="margin-top:6px;"></div>
+
+  <a class="btn btn-primary" id="shareWA" href="#" style="margin-top:12px;" target="_blank">
+    Send on WhatsApp
+  </a>
+
+  <div style="margin-top:12px;">
+    <button class="btn btn-outline" id="backToCart">Back</button>
+    <button class="btn btn-secondary" id="goDelivered">Show delivered codes</button>
+  </div>
+
+</section>
+
+
+
+<!-- ====================== -->
+<!-- STEP 3 – DELIVERED -->
+<!-- ====================== -->
+<section class="card step" id="step3">
+  <div class="section-title">Delivered Codes</div>
+  <div id="deliveredCodes" class="muted">Codes will appear here.</div>
+
+  <button class="btn btn-outline" id="backToPay" style="margin-top:12px;">
+    Back to payment
+  </button>
+</section>
+
+
+
+</div><!-- end steps -->
+
+
+<footer>
+  <div>© <span id="year"></span> Gupta Coupons</div>
+</footer>
+
+</div><!-- container -->
+
+
+<script src="script.js"></script>
+
+<script>
+  // MOBILE STEP CONTROLLER
+  function go(step){
+    document.querySelectorAll('.step').forEach((s,i)=>{
+      s.classList.toggle('active', i === step-1);
     });
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
 
-    // simple “Continue to payment / Back” buttons (buttons exist in HTML)
-    document.getElementById('goPayment')?.addEventListener('click', ()=> goTo(2));
-    document.getElementById('backToCart')?.addEventListener('click', ()=> goTo(1));
-    document.getElementById('backToPay')?.addEventListener('click', ()=> goTo(2));
-    document.getElementById('goDelivered')?.addEventListener('click', ()=> goTo(3));
-  </script>
+  go(1);
+
+  document.getElementById('goPayment').onclick = ()=> go(2);
+  document.getElementById('backToCart').onclick = ()=> go(1);
+  document.getElementById('goDelivered').onclick = ()=> go(3);
+  document.getElementById('backToPay').onclick = ()=> go(2);
+</script>
+
 </body>
 </html>
+
+
 
 
 
