@@ -140,6 +140,16 @@
           </h3>
           <div id="receiptBody" class="muted">No items yet. Choose coupons and click “Generate order”.</div>
         </div>
+<div class="divider"></div>
+
+<label for="txnId">UPI Txn / UTR ID</label>
+<input id="txnId" placeholder="Enter UPI Ref / UTR" />
+
+<div style="margin-top:8px;">
+  <button class="btn btn-primary" id="verifyPay">Verify payment & show codes</button>
+</div>
+
+<div id="payStatus" class="muted" style="margin-top:6px;"></div>
 
         <!-- Upload / Send payment proof -->
         <div style="display:flex; gap:10px; margin-top:12px; flex-wrap: wrap;">
@@ -206,6 +216,7 @@
   </script>
 </body>
 </html>
+
 
 
 
