@@ -3,7 +3,7 @@
 // ==============================
 
 // ------- CONFIG -------
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbytsOYztcywQo-7dceAzPlc_XD_CeOc32vXLAunqNnmrqVEog-Nf9c_JuJ5RCsbaA6YfQ/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwVylIHzmbjmhEOxpww7-MSVPGmhr0aRmER1xYx-IRXj7qVXEOI4OQZYFyxzxxP61TmMQ/exec";
 const SECRET_TOKEN = "Niraj@9631"; // must match Apps Script token
 
 const TYPE_MAP = { F20: "F20", F19: "F19", F17: "F17" };
@@ -394,6 +394,7 @@ on(document.getElementById('clearAll'), 'click', ()=>{
 window._debug_state = state;
 window._debug_catalog = CATALOG;
 window._deliverCodes = deliverCodes;
+
 
 
 
