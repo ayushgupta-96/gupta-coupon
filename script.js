@@ -3,7 +3,7 @@
 // ==============================
 
 // ------- CONFIG -------
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwVylIHzmbjmhEOxpww7-MSVPGmhr0aRmER1xYx-IRXj7qVXEOI4OQZYFyxzxxP61TmMQ/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzHj-gV7JzzVrOgLGTiwJwI63ThnCTI4FuOa3QpJdBVw43cnUW7VcQphqS-0iMXB0zs-A/exec";
 const SECRET_TOKEN = "Niraj@9631"; // must match Apps Script token
 
 const TYPE_MAP = { F20: "F20", F19: "F19", F17: "F17" };
@@ -56,10 +56,15 @@ function jsonpRequest(baseUrl, params) {
     const cbName = "cb_" + Math.random().toString(36).slice(2);
     const url = baseUrl + "?" + new URLSearchParams({ ...params, callback: cbName }).toString();
 
-    window[cbName] = (data) => { resolve(data); cleanup(); };
+    let timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error("JSONP timeout"));
+    }, 15000);
+
+    window[cbName] = (data) => { clearTimeout(timeout); resolve(data); cleanup(); };
     const s = document.createElement("script");
     s.src = url;
-    s.onerror = () => { reject(new Error("JSONP failed")); cleanup(); };
+    s.onerror = () => { clearTimeout(timeout); reject(new Error("JSONP failed")); cleanup(); };
     document.head.appendChild(s);
 
     function cleanup(){
@@ -70,7 +75,6 @@ function jsonpRequest(baseUrl, params) {
 }
 
 // ------- RENDER / UI -------
-
 function renderCoupons(){
   if (!couponListEl) return;
   couponListEl.innerHTML = '';
@@ -156,7 +160,6 @@ function recalc(){
 }
 
 // ------- ORDER / DELIVER CODES -------
-
 async function deliverCodes(orderId, requests, receiptBodyLocal){
   // Make JSONP requests for each item type, return results array
   const results = [];
@@ -271,139 +274,4 @@ async function generateOrder(){
       </div>
       <div class="divider"></div>
       <table style="width:100%; border-collapse: collapse;">
-        <thead><tr style="color:var(--muted);text-align:left"><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Amount</th></tr></thead>
-        <tbody>${lines}</tbody>
-        <tfoot>
-          <tr><td></td><td style="text-align:right;color:var(--muted)">Subtotal</td><td style="text-align:right">₹${subForReceipt}</td></tr>
-          ${discountForReceipt>0?`<tr><td></td><td style="text-align:right;color:var(--muted)">Discount</td><td style="text-align:right">-₹${discountForReceipt}</td></tr>`:''}
-          <tr><td></td><td style="text-align:right;color:var(--muted)">Fee</td><td style="text-align:right">₹${feeForReceipt}</td></tr>
-          <tr><td></td><td style="text-align:right;font-weight:800">Total</td><td style="text-align:right;font-weight:800">₹${grandTotal}</td></tr>
-        </tfoot>
-      </table>
-      <div class="divider"></div>
-      ${note ? `<div class="muted"><strong>Note:</strong> ${escapeHtml(note)}</div><div class="divider"></div>` : ''}
-      <div class="notice">Pay via UPI to <strong>${escapeHtml(document.getElementById('upiId')?.textContent||'')}</strong>. After payment enter the UTR and click "Verify payment & show codes".</div>
-    `;
-  }
-
-  // set whatsapp message link
-  let msg = `*Coupon Order*%0AOrder ID: ${orderId}%0ATotal: ₹${grandTotal}%0AItems:%0A` +
-    requests.map(r => `- ${r.type} x ${r.qty}`).join('%0A');
-  if (name) msg = `*Coupon Order*%0AOrder ID: ${orderId}%0AName: ${encodeURIComponent(name)}%0A` + msg.slice('*Coupon Order*%0A'.length);
-  if (grandTotal) msg += `%0A%0A*To pay:* ₹${grandTotal}`;
-
-  if (shareBtn) shareBtn.href = `https://api.whatsapp.com/send?phone=918757275722&text=${msg}`;
-
-  // switch to payment step for mobile
-  goTo(2);
-}
-
-// ------- VERIFY PAYMENT & DELIVER -------
-async function verifyPaymentAndDeliver(){
-  const txn = (document.getElementById('txnId') || {}).value?.trim() || '';
-  const payStatusEl = document.getElementById('payStatus');
-
-  if (!txn) {
-    if (payStatusEl) payStatusEl.textContent = 'Please enter a UPI Txn / UTR ID.';
-    return;
-  }
-
-  // Simple local validation: length & allowed chars (this is minimal)
-  if (!/^[A-Za-z0-9\-\/]{6,60}$/.test(txn)) {
-    if (payStatusEl) payStatusEl.textContent = 'Txn ID looks invalid. Please check and try.';
-    return;
-  }
-
-  // Prevent duplicate delivery: if already delivered for same orderId, stop
-  if (_deliveredResults && _lastOrderId && _deliveredResults.orderId === _lastOrderId) {
-    if (payStatusEl) payStatusEl.textContent = 'Codes already delivered for this order.';
-    return;
-  }
-
-  // Here you would normally call your server to verify the Txn/UTR and amount.
-  // For now: we only check Txn exists and then request codes from Apps Script.
-  if (payStatusEl) payStatusEl.textContent = 'Verifying payment...';
-
-  try {
-    // OPTIONAL: You may want to call a verification endpoint that checks the Txn ID hasn't been used
-    // and that amount matches _lastGrandTotal. That server should return ok:true before we call deliverCodes.
-    // For now we proceed to call deliverCodes directly.
-
-    if (!_lastOrderId || !_lastRequests || _lastRequests.length === 0) {
-      if (payStatusEl) payStatusEl.textContent = 'No pending order found. Generate order first.';
-      return;
-    }
-
-    // show a small delay for UX
-    await new Promise(r => setTimeout(r, 800));
-    if (payStatusEl) payStatusEl.textContent = 'Payment confirmed (local). Fetching codes...';
-
-    const results = await deliverCodes(_lastOrderId, _lastRequests, receiptBody);
-    // tag delivered results with orderId for safety
-    _deliveredResults = { orderId: _lastOrderId, results };
-
-    if (payStatusEl) payStatusEl.textContent = 'Codes delivered.';
-
-    // switch to delivered step
-    goTo(3);
-
-  } catch (err) {
-    if (payStatusEl) payStatusEl.textContent = 'Verification or fetch failed: ' + String(err);
-  }
-}
-
-// ------- small helper goTo (used by mobile stepper script) -------
-function goTo(stepNum){
-  ['step1','step2','step3'].forEach(id=>{
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (id === `step${stepNum}`) el.classList.add('active');
-    else el.classList.remove('active');
-  });
-  const topEl = document.getElementById(`step${stepNum}`);
-  if (topEl) topEl.scrollIntoView({behavior:'smooth', block:'start'});
-}
-
-// ------- INIT / wiring -------
-renderCoupons();
-recalc();
-
-on(applyOfferEl, 'change', ()=>{
-  state.offerApplied = !!applyOfferEl.checked;
-  recalc();
-});
-
-// buttons
-on(document.getElementById('makeOrder'), 'click', generateOrder);
-on(document.getElementById('verifyPay'), 'click', verifyPaymentAndDeliver);
-on(document.getElementById('goPayment'), 'click', ()=> goTo(2));
-on(document.getElementById('backToCart'), 'click', ()=> goTo(1));
-on(document.getElementById('goDelivered'), 'click', ()=> goTo(3));
-on(document.getElementById('backToPay'), 'click', ()=> goTo(2));
-on(document.getElementById('clearAll'), 'click', ()=>{
-  state.items = {}; state.total = 0; renderCoupons(); recalc();
-  document.getElementById('buyerName').value = '';
-  document.getElementById('buyerPhone').value = '';
-  document.getElementById('buyerNote').value = '';
-  if (receiptBody) receiptBody.innerHTML = 'No items yet. Choose coupons and click “Generate order”.';
-  document.getElementById('orderStatus').textContent = 'Draft';
-  if (shareBtn) shareBtn.href = '#';
-});
-
-// expose for debugging
-window._debug_state = state;
-window._debug_catalog = CATALOG;
-window._deliverCodes = deliverCodes;
-
-
-
-
-
-
-
-
-
-
-
-
-
+        <thead><tr style="color:var(--muted);text-align:left"><th>It
