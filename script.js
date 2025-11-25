@@ -26,16 +26,16 @@ const state = {
   offerApplied: false
 };
 
-// ------- DOM REFS -------
-const couponListEl = document.getElementById('couponList');
-const receiptBody   = document.getElementById('receiptBody');
-const shareBtn      = document.getElementById('shareWA');
-const deliveredEl   = document.getElementById('deliveredCodes');
+// ------- DOM REFS (will be filled on DOMContentLoaded) -------
+let couponListEl = null;
+let receiptBody   = null;
+let shareBtn      = null;
+let deliveredEl   = null;
 
-const applyOfferEl  = document.getElementById('applyOffer');
-const offerStatusEl = document.getElementById('offerStatus');
-const discountRowEl = document.getElementById('discountRow');
-const discountEl    = document.getElementById('discount');
+let applyOfferEl  = null;
+let offerStatusEl = null;
+let discountRowEl = null;
+let discountEl    = null;
 
 // For verify/pay flow
 let _lastRequests = [];  // [{type, qty}]
@@ -147,9 +147,13 @@ function recalc(){
   const fee = subtotal > 0 ? PLATFORM_FEE : 0;
   const total = subtotal - discount + fee;
 
-  document.getElementById('subtotal').textContent = `₹${subtotal}`;
-  document.getElementById('fee').textContent = `₹${fee}`;
-  document.getElementById('total').textContent = `₹${total}`;
+  const subtotalEl = document.getElementById('subtotal');
+  const feeEl = document.getElementById('fee');
+  const totalEl = document.getElementById('total');
+
+  if (subtotalEl) subtotalEl.textContent = `₹${subtotal}`;
+  if (feeEl) feeEl.textContent = `₹${fee}`;
+  if (totalEl) totalEl.textContent = `₹${total}`;
 
   if (discountRowEl && discountEl) {
     discountRowEl.style.display = discount > 0 ? '' : 'none';
@@ -274,4 +278,161 @@ async function generateOrder(){
       </div>
       <div class="divider"></div>
       <table style="width:100%; border-collapse: collapse;">
-        <thead><tr style="color:var(--muted);text-align:left"><th>It
+        <thead><tr style="color:var(--muted);text-align:left"><th>Item</th><th style="text-align:center">Qty</th><th style="text-align:right">Amount</th></tr></thead>
+        <tbody>${lines}</tbody>
+        <tfoot>
+          <tr><td></td><td style="text-align:right;color:var(--muted)">Subtotal</td><td style="text-align:right">₹${subForReceipt}</td></tr>
+          ${discountForReceipt>0?`<tr><td></td><td style="text-align:right;color:var(--muted)">Discount</td><td style="text-align:right">-₹${discountForReceipt}</td></tr>`:''}
+          <tr><td></td><td style="text-align:right;color:var(--muted)">Fee</td><td style="text-align:right">₹${feeForReceipt}</td></tr>
+          <tr><td></td><td style="text-align:right;font-weight:800">Total</td><td style="text-align:right;font-weight:800">₹${grandTotal}</td></tr>
+        </tfoot>
+      </table>
+      <div class="divider"></div>
+      ${note ? `<div class="muted"><strong>Note:</strong> ${escapeHtml(note)}</div><div class="divider"></div>` : ''}
+      <div class="notice">Pay via UPI to <strong>${escapeHtml(document.getElementById('upiId')?.textContent||'')}</strong>. After payment enter the UTR and click "Verify payment & show codes".</div>
+    `;
+  }
+
+  // set whatsapp message link
+  let msg = `*Coupon Order*%0AOrder ID: ${orderId}%0ATotal: ₹${grandTotal}%0AItems:%0A` +
+    requests.map(r => `- ${r.type} x ${r.qty}`).join('%0A');
+  if (name) msg = `*Coupon Order*%0AOrder ID: ${orderId}%0AName: ${encodeURIComponent(name)}%0A` + msg.slice('*Coupon Order*%0A'.length);
+  if (grandTotal) msg += `%0A%0A*To pay:* ₹${grandTotal}`;
+
+  if (shareBtn) shareBtn.href = `https://api.whatsapp.com/send?phone=918757275722&text=${msg}`;
+
+  // switch to payment step for mobile
+  goTo(2);
+}
+
+// ------- VERIFY PAYMENT HELPERS -------
+async function verifyTxnWithServer(txn, amount, orderId) {
+  if (!txn) throw new Error("Txn ID missing");
+  try {
+    const res = await jsonpRequest(WEB_APP_URL, {
+      token: SECRET_TOKEN,
+      action: 'verifyTxn',
+      txn: txn,
+      amount: String(amount || ''),
+      orderId: orderId || ''
+    });
+    if (!res) throw new Error("No response from verification service");
+    if (res.ok) return { ok: true, info: res };
+    return { ok: false, error: res.error || (res.used? 'Txn already used' : 'Verification failed'), info: res };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
+// ------- VERIFY PAYMENT & DELIVER -------
+async function verifyPaymentAndDeliver(){
+  const txn = (document.getElementById('txnId') || {}).value?.trim() || '';
+  const payStatusEl = document.getElementById('payStatus');
+
+  if (!txn) {
+    if (payStatusEl) payStatusEl.textContent = 'Please enter a UPI Txn / UTR ID.';
+    return;
+  }
+
+  if (!/^[A-Za-z0-9\-\/]{6,60}$/.test(txn)) {
+    if (payStatusEl) payStatusEl.textContent = 'Txn ID looks invalid. Please check and try.';
+    return;
+  }
+
+  if (_deliveredResults && _lastOrderId && _deliveredResults.orderId === _lastOrderId) {
+    if (payStatusEl) payStatusEl.textContent = 'Codes already delivered for this order.';
+    return;
+  }
+
+  if (!_lastOrderId || !_lastRequests || _lastRequests.length === 0) {
+    if (payStatusEl) payStatusEl.textContent = 'No pending order found. Generate order first.';
+    return;
+  }
+
+  if (payStatusEl) payStatusEl.textContent = 'Verifying payment with server...';
+  try {
+    const verifyRes = await verifyTxnWithServer(txn, _lastGrandTotal, _lastOrderId);
+
+    if (!verifyRes.ok) {
+      if (payStatusEl) payStatusEl.textContent = 'Verification failed: ' + (verifyRes.error || 'Unknown error');
+      return;
+    }
+
+    if (payStatusEl) payStatusEl.textContent = 'Payment verified. Fetching codes...';
+    await new Promise(r => setTimeout(r, 600));
+
+    const results = await deliverCodes(_lastOrderId, _lastRequests, receiptBody);
+    _deliveredResults = { orderId: _lastOrderId, results };
+
+    if (payStatusEl) payStatusEl.textContent = 'Codes delivered.';
+    goTo(3);
+
+  } catch (err) {
+    if (payStatusEl) payStatusEl.textContent = 'Verification or fetch failed: ' + String(err);
+  }
+}
+
+// ------- small helper goTo (used by mobile stepper script) -------
+function goTo(stepNum){
+  ['step1','step2','step3'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (id === `step${stepNum}`) el.classList.add('active');
+    else el.classList.remove('active');
+  });
+  const topEl = document.getElementById(`step${stepNum}`);
+  if (topEl) topEl.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+// ------- INIT / wiring -------
+function init() {
+  // grab DOM refs now that DOM is ready
+  couponListEl = document.getElementById('couponList');
+  receiptBody   = document.getElementById('receiptBody');
+  shareBtn      = document.getElementById('shareWA');
+  deliveredEl   = document.getElementById('deliveredCodes');
+
+  applyOfferEl  = document.getElementById('applyOffer');
+  offerStatusEl = document.getElementById('offerStatus');
+  discountRowEl = document.getElementById('discountRow');
+  discountEl    = document.getElementById('discount');
+
+  // initial render
+  renderCoupons();
+  recalc();
+
+  // wiring
+  if (applyOfferEl) on(applyOfferEl, 'change', ()=>{
+    state.offerApplied = !!applyOfferEl.checked;
+    recalc();
+  });
+
+  on(document.getElementById('makeOrder'), 'click', generateOrder);
+  on(document.getElementById('verifyPay'), 'click', verifyPaymentAndDeliver);
+  on(document.getElementById('goPayment'), 'click', ()=> goTo(2));
+  on(document.getElementById('backToCart'), 'click', ()=> goTo(1));
+  on(document.getElementById('goDelivered'), 'click', ()=> goTo(3));
+  on(document.getElementById('backToPay'), 'click', ()=> goTo(2));
+  on(document.getElementById('clearAll'), 'click', ()=>{ 
+    state.items = {}; state.total = 0; renderCoupons(); recalc();
+    const n = document.getElementById('buyerName'); if (n) n.value = '';
+    const ph = document.getElementById('buyerPhone'); if (ph) ph.value = '';
+    const note = document.getElementById('buyerNote'); if (note) note.value = '';
+    if (receiptBody) receiptBody.innerHTML = 'No items yet. Choose coupons and click “Generate order”.';
+    const os = document.getElementById('orderStatus'); if (os) os.textContent = 'Draft';
+    if (shareBtn) shareBtn.href = '#';
+  });
+
+  // expose for debugging
+  window._debug_state = state;
+  window._debug_catalog = CATALOG;
+  window._deliverCodes = deliverCodes;
+}
+
+// run init when DOM ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  // already loaded
+  init();
+}
